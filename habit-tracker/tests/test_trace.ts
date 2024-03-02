@@ -53,7 +53,7 @@ describe("habit-tracker", async () => {
       amountInSOL,
       deadlineSlot,
       messageString,
-      [voter1.publicKey, voter2.publcd icKey, voter3.publicKey, voter4.publicKey],
+      [voter1.publicKey, voter2.publicKey, voter3.publicKey, voter4.publicKey],
     );
 
     await vote(promiseId, voter1, true, promiser.publicKey, [voter2.publicKey, voter3.publicKey]);
