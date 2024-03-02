@@ -21,7 +21,8 @@ describe("habit-tracker", async () => {
   it("A Simple trace", async () => {
     const promiser: web3.Keypair = await getSystemKeyPair();
     const userDataPDA: web3.PublicKey = getUserDataPDA(promiser.publicKey);
-    const [voter1, voter2, voter3] = await Promise.all([
+    const [voter1, voter2, voter3, voter4] = await Promise.all([
+      generateKeyPair(connection, 10),
       generateKeyPair(connection, 10),
       generateKeyPair(connection, 10),
       generateKeyPair(connection, 10),
@@ -34,6 +35,7 @@ describe("habit-tracker", async () => {
       ['voter1', voter1.publicKey],
       ['voter2', voter2.publicKey],
       ['voter3', voter3.publicKey],
+      ['voter4', voter4.publicKey],
     ]);
 
     await registerUser(promiser);
@@ -51,12 +53,13 @@ describe("habit-tracker", async () => {
       amountInSOL,
       deadlineSlot,
       messageString,
-      [voter1.publicKey, voter2.publicKey, voter3.publicKey],
+      [voter1.publicKey, voter2.publcd icKey, voter3.publicKey, voter4.publicKey],
     );
 
     await vote(promiseId, voter1, true, promiser.publicKey, [voter2.publicKey, voter3.publicKey]);
     await vote(promiseId, voter2, false, promiser.publicKey, [voter1.publicKey, voter3.publicKey]);
     await vote(promiseId, voter3, true, promiser.publicKey, [voter1.publicKey, voter2.publicKey]);
+    await vote(promiseId, voter4, true, promiser.publicKey, [voter1.publicKey, voter2.publicKey]);
 
     await fetchPromise(promiser.publicKey, promiseId);
 

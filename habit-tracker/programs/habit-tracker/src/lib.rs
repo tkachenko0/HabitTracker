@@ -19,7 +19,8 @@ pub mod habit_tracker {
         amount: u64,
         deadline: u64,
         promise_message: String,
-        num_voters: u64
+        num_voters: u64,
+        message_len: u64,
     ) -> Result<()> {
         msg!("Promise ID: {}", promise_id);
         msg!("Amount: {}", amount);
@@ -35,6 +36,11 @@ pub mod habit_tracker {
             HabitTrackerError::InvalidVotersNumber
         );
 
+        require!(
+            promise_message.len() <= message_len as usize,
+            HabitTrackerError::InvalidMessageLength
+        );
+ 
         promise.init(
             promiser.key(),
             promise_message,
@@ -134,7 +140,7 @@ pub struct VoteInfo {
 #[account]
 pub struct Promise {
     pub promiser: Pubkey,
-    pub promise_message: [u8; 95],
+    pub promise_message: String,
     pub amount: u64,
     pub deadline: u64,
     pub votes: Vec<VoteInfo>,
@@ -150,7 +156,7 @@ impl Promise {
         voters: Vec<AccountInfo>,
     ) {
         self.promiser = promiser;
-        self.promise_message = promise_message.as_bytes().try_into().unwrap();
+        self.promise_message = promise_message;
         self.amount = amount;
         self.deadline = deadline;
         self.votes = voters
@@ -221,8 +227,8 @@ impl Promise {
         return false;
     }
 
-    pub const fn space(num_voters: usize) -> usize {
-        8 + 32 + 95 + 8 + 8 + (4 + (num_voters * VoteInfo::INIT_SPACE))
+    pub const fn space(num_voters: u64, message_len: u64) -> usize {
+        (8 + 32 + (4 + message_len) + 8 + 8 + (4 + (num_voters * VoteInfo::INIT_SPACE as u64))) as usize
     }
 
 }
@@ -256,7 +262,7 @@ pub struct RegisterUserCtx<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(promise_id: String, amount: u64, deadline: u64, promise_message: String, num_voters: u64)]
+#[instruction(promise_id: String, amount: u64, deadline: u64, promise_message: String, num_voters: u64, message_len: u64)]
 pub struct StartPoolCtx<'info> {
     #[account(mut)]
     pub promiser: Signer<'info>,
@@ -269,7 +275,7 @@ pub struct StartPoolCtx<'info> {
             promiser.key().as_ref()
             ],
         bump,
-        space = Promise::space(3)
+        space = Promise::space(num_voters, message_len)
     )]
     pub promise: Account<'info, Promise>,
     #[account(
@@ -343,4 +349,7 @@ pub enum HabitTrackerError {
 
     #[msg("The number of voters is invalid")]
     InvalidVotersNumber,
+
+    #[msg("The message length is invalid")]
+    InvalidMessageLength,
 }

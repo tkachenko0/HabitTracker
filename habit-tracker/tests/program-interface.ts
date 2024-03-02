@@ -26,8 +26,9 @@ export async function startPool(
             promiseId,
             new anchor.BN(amountInSOL * web3.LAMPORTS_PER_SOL),
             new anchor.BN(deadline),
-            adjustPromiseMessage(promiseMessage),
+            promiseMessage,
             new anchor.BN(voters.length),
+            new anchor.BN(promiseMessage.length),            
         ).accounts({promiser: promiser.publicKey})
         .remainingAccounts(voters.map(voterPublicKey => {
             return { pubkey: voterPublicKey, isWritable: false, isSigner: false };
