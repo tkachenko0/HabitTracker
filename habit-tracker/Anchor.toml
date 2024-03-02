@@ -1,0 +1,19 @@
+[toolchain]
+
+[features]
+seeds = true
+skip-lint = false
+
+[programs.localnet]
+habit_tracker = "HabTbz4qE9B6tXJvEn9g2on1fmZ5CtX8zVWUK1Xn7ewR"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "/Users/vtkachenko/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test_trace = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/test_trace.ts"
