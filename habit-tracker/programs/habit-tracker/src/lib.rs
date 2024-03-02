@@ -19,6 +19,7 @@ pub mod habit_tracker {
         amount: u64,
         deadline: u64,
         promise_message: String,
+        num_voters: u64
     ) -> Result<()> {
         msg!("Promise ID: {}", promise_id);
         msg!("Amount: {}", amount);
@@ -28,22 +29,23 @@ pub mod habit_tracker {
         let promise = &mut ctx.accounts.promise;
         let promiser_data = &mut ctx.accounts.promiser_data;
 
+        let voters = ctx.remaining_accounts;
+        require!(
+            num_voters == voters.len() as u64,
+            HabitTrackerError::InvalidVotersNumber
+        );
+
         promise.init(
             promiser.key(),
             promise_message,
             amount,
             deadline,
-            ctx.accounts.voter1.key(),
-            ctx.accounts.voter2.key(),
-            ctx.accounts.voter3.key(),
+            voters.to_vec(),
         );
         promiser_data.num_promises += 1;
 
-        let transfer_instruction = system_instruction::transfer(
-            &promiser.key(), 
-            &promise.to_account_info().key, 
-            amount
-        );
+        let transfer_instruction =
+            system_instruction::transfer(&promiser.key(), &promise.to_account_info().key, amount);
         invoke_signed(
             &transfer_instruction,
             &[promiser.to_account_info(), promise.to_account_info()],
@@ -115,22 +117,27 @@ pub mod habit_tracker {
     }
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
+pub enum VoteStatus {
+    NotVotedYet,
+    Yes,
+    No,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+pub struct VoteInfo {
+    pub voter: Pubkey,
+    pub vote: VoteStatus,
+}
+
+
 #[account]
-#[derive(InitSpace)]
 pub struct Promise {
     pub promiser: Pubkey,
     pub promise_message: [u8; 95],
     pub amount: u64,
     pub deadline: u64,
-    pub voter1: Pubkey,
-    pub voter1_has_voted: bool,
-    pub voter1_chiose: bool,
-    pub voter2: Pubkey,
-    pub voter2_has_voted: bool,
-    pub voter2_chiose: bool,
-    pub voter3: Pubkey,
-    pub voter3_has_voted: bool,
-    pub voter3_chiose: bool,
+    pub votes: Vec<VoteInfo>,
 }
 
 impl Promise {
@@ -140,54 +147,84 @@ impl Promise {
         promise_message: String,
         amount: u64,
         deadline: u64,
-        voter1: Pubkey,
-        voter2: Pubkey,
-        voter3: Pubkey,
+        voters: Vec<AccountInfo>,
     ) {
         self.promiser = promiser;
         self.promise_message = promise_message.as_bytes().try_into().unwrap();
         self.amount = amount;
         self.deadline = deadline;
-        self.voter1 = voter1;
-        self.voter1_has_voted = false;
-        self.voter1_chiose = false;
-        self.voter2 = voter2;
-        self.voter2_has_voted = false;
-        self.voter2_chiose = false;
-        self.voter3 = voter3;
-        self.voter3_has_voted = false;
-        self.voter3_chiose = false;
+        self.votes = voters
+            .iter()
+            .map(|voter| VoteInfo {
+                voter: *voter.key,
+                vote: VoteStatus::NotVotedYet,
+            })
+            .collect();
     }
 
     pub fn vote(&mut self, voter: Pubkey, chiose: bool) -> Result<()> {
         require!(self.is_valid_voter(voter), HabitTrackerError::InvalidVoter);
-        if self.voter1 == voter {
-            require!(!self.voter1_has_voted, HabitTrackerError::VoterAlreadyVoted);
-            self.voter1_has_voted = true;
-            self.voter1_chiose = chiose;
-        } else if self.voter2 == voter {
-            require!(!self.voter2_has_voted, HabitTrackerError::VoterAlreadyVoted);
-            self.voter2_has_voted = true;
-            self.voter2_chiose = chiose;
-        } else if self.voter3 == voter {
-            require!(!self.voter3_has_voted, HabitTrackerError::VoterAlreadyVoted);
-            self.voter3_has_voted = true;
-            self.voter3_chiose = chiose;
+        require!(!self.has_voted(voter), HabitTrackerError::VoterAlreadyVoted);
+        let vote = if chiose {
+            VoteStatus::Yes
+        } else {
+            VoteStatus::No
+        };
+        for vote_info in self.votes.iter_mut() {
+            if vote_info.voter == voter {
+                vote_info.vote = vote;
+                break;
+            }
         }
         Ok(())
     }
 
+    pub fn has_voted(&self, voter: Pubkey) -> bool {
+        for vote_info in self.votes.iter() {
+            if vote_info.voter == voter{
+                return vote_info.vote != VoteStatus::NotVotedYet;
+            }
+        }
+        return false;
+    }
+
     pub fn all_voted(&self) -> bool {
-        self.voter1_has_voted && self.voter2_has_voted && self.voter3_has_voted
+        for vote_info in self.votes.iter() {
+            if vote_info.vote == VoteStatus:: NotVotedYet{
+                return false;
+            }
+        }
+        return true;
     }
 
     pub fn was_respected(&self) -> bool {
-        self.voter1_chiose && self.voter2_chiose && self.voter3_chiose
+        let mut yes_votes = 0;
+        let mut no_votes = 0;
+
+        for vote_info in self.votes.iter() {
+            match vote_info.vote {
+                VoteStatus::Yes => yes_votes += 1,
+                VoteStatus::No => no_votes += 1,
+                _ => {}
+            }
+        }
+
+        yes_votes > no_votes
     }
 
     pub fn is_valid_voter(&self, voter: Pubkey) -> bool {
-        self.voter1 == voter || self.voter2 == voter || self.voter3 == voter
+        for vote_info in self.votes.iter() {
+            if vote_info.voter == voter{
+                return true;
+            }
+        }
+        return false;
     }
+
+    pub const fn space(num_voters: usize) -> usize {
+        8 + 32 + 95 + 8 + 8 + (4 + (num_voters * VoteInfo::INIT_SPACE))
+    }
+
 }
 
 #[account]
@@ -219,7 +256,7 @@ pub struct RegisterUserCtx<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(promise_id: String)]
+#[instruction(promise_id: String, amount: u64, deadline: u64, promise_message: String, num_voters: u64)]
 pub struct StartPoolCtx<'info> {
     #[account(mut)]
     pub promiser: Signer<'info>,
@@ -232,7 +269,7 @@ pub struct StartPoolCtx<'info> {
             promiser.key().as_ref()
             ],
         bump,
-        space = 8 + Promise::INIT_SPACE
+        space = Promise::space(3)
     )]
     pub promise: Account<'info, Promise>,
     #[account(
@@ -242,9 +279,6 @@ pub struct StartPoolCtx<'info> {
     )]
     pub promiser_data: Account<'info, UserData>,
     pub system_program: Program<'info, System>,
-    pub voter1: SystemAccount<'info>,
-    pub voter2: SystemAccount<'info>,
-    pub voter3: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -252,6 +286,7 @@ pub struct StartPoolCtx<'info> {
 pub struct VotingCtx<'info> {
     #[account(mut)]
     pub voter: Signer<'info>,
+    #[account(mut)]
     pub promiser: SystemAccount<'info>,
     #[account(
         mut,
@@ -305,4 +340,7 @@ pub enum HabitTrackerError {
 
     #[msg("The timeout slot was reached")]
     DeadlineReached,
+
+    #[msg("The number of voters is invalid")]
+    InvalidVotersNumber,
 }

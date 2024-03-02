@@ -18,9 +18,7 @@ export async function startPool(
     amountInSOL: number,
     deadline: number,
     promiseMessage: string,
-    voter1: web3.PublicKey,
-    voter2: web3.PublicKey,
-    voter3: web3.PublicKey,
+    voters: web3.PublicKey[],
 ) {
     console.log(`Starting pool for promise ${promiseId}...`);
     const instruction = await program.methods
@@ -29,12 +27,12 @@ export async function startPool(
             new anchor.BN(amountInSOL * web3.LAMPORTS_PER_SOL),
             new anchor.BN(deadline),
             adjustPromiseMessage(promiseMessage),
-        ).accounts({
-            promiser: promiser.publicKey,
-            voter1: voter1,
-            voter2: voter2,
-            voter3: voter3,
-        }).instruction();
+            new anchor.BN(voters.length),
+        ).accounts({promiser: promiser.publicKey})
+        .remainingAccounts(voters.map(voterPublicKey => {
+            return { pubkey: voterPublicKey, isWritable: false, isSigner: false };
+        }))
+        .instruction();
 
     await sendAnchorInstructions(connection, [instruction], [promiser]);
 }
@@ -44,7 +42,7 @@ export async function vote(
     voter: web3.Keypair,
     choice: boolean,
     promiser: web3.PublicKey,
-    otherVoters: web3.PublicKey[] = [],
+    otherVoters: web3.PublicKey[],
 ) {
     console.log(`Voting... user: ${voter.publicKey.toBase58()}, choice: ${choice}`);
     const instruction = await program.methods
@@ -97,16 +95,4 @@ export async function fetchPromise(promiser: web3.PublicKey, promiseId: string) 
     console.log('PromiseMessage:', Buffer.from(promiseData.promiseMessage).slice(0, 200).toString('utf-8'));
     console.log('Amount:', promiseData.amount.toNumber());
     console.log('Deadline:', promiseData.deadline.toNumber());
-
-    console.log('Voter1:', promiseData.voter1.toBase58());
-    console.log('Voter1 has voted:', promiseData.voter1HasVoted);
-    console.log('Voter1 has voted for:', promiseData.voter1Chiose);
-
-    console.log('Voter2:', promiseData.voter2.toBase58());
-    console.log('Voter2 has voted:', promiseData.voter2HasVoted);
-    console.log('Voter2 has voted for:', promiseData.voter2Chiose);
-
-    console.log('Voter3:', promiseData.voter3.toBase58());
-    console.log('Voter3 has voted:', promiseData.voter3HasVoted);
-    console.log('Voter3 has voted for:', promiseData.voter3Chiose);
 }
