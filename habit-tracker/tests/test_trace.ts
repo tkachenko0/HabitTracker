@@ -55,9 +55,9 @@ describe("habit-tracker", async () => {
       console.log(`invite: ${invite.toBase58()}`);
     });
 
-    //await voteForAllVoters(promiseId, promiser.publicKey, voters, false);
+    await voteForAllVoters(promiseId, promiser.publicKey, voters, false);
 
-    //await fetchPromise(promiser.publicKey, promiseId);
+    await fetchPromise(promiser.publicKey, promiseId);
 
     //await waitDeadlineSlot(connection, deadlineSlot);
     //await timeout(promiser, promiseId);
