@@ -1,7 +1,8 @@
 {
     "scripts": {
         "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-        "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+        "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+        "migrate-interface": "cp target/idl/habit_tracker.json app/src/interface && cp target/types/habit_tracker.ts app/src/interface"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.29.0",
