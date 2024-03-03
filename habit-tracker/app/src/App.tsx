@@ -1,7 +1,7 @@
 import { WalletMultiButton, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
-import { useRegisterUser } from "./hooks/useRegisterUser";
+import { useRegisterUser } from "./hooks/program/useRegisterUser";
 import { useFetchBalance } from "./hooks/useFetchBalance";
-import { useCreatePromise } from "./hooks/useCreatePromise";
+import { useCreatePromise } from "./hooks/program/useCreatePromise";
 import UserInvites from "./components/UserInvites";
 
 const App = () => {

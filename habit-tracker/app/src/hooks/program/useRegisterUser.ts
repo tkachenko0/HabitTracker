@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useProvider } from "./useProvider";
-import { useWalletConnection } from "./useWalletConnection";
+import { useProvider } from "../useProvider";
+import { useWalletConnection } from "../useWalletConnection";
 import { useProgram } from "./useProgram";
 
 export const useRegisterUser = () => {

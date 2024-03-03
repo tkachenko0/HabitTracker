@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
-import { useFetchInvites } from "../hooks/useFetchInvites";
-import { useProgram } from "../hooks/useProgram";
+import { useFetchInvites } from "../hooks/program/useFetchInvites";
+import { useProgram } from "../hooks/program/useProgram";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 
 const UserInvites = () => {

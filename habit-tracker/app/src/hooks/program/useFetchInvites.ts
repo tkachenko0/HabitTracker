@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { web3 } from "@coral-xyz/anchor";
 import { useProgram } from "./useProgram";
-import { useWalletConnection } from "./useWalletConnection";
+import { useWalletConnection } from "../useWalletConnection";
 
 export const useFetchInvites = () => {
   const [invites, setInvites] = useState<web3.PublicKey[]>([]);
