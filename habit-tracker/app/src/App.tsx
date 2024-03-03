@@ -69,7 +69,6 @@ const App = () => {
       <WalletMultiButton />
       <WalletDisconnectButton />
       <button onClick={registerUser}>Register User</button>
-      <button onClick={registerUser}>Register User2</button>
       {error && <p style={{ color: "red" }}>{error}</p>}
       <button onClick={getBalance}>Fetch Balance</button>
       {myBalance && <p>My Balance: {myBalance}</p>}
