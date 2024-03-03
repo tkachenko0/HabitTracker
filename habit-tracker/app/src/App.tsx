@@ -70,7 +70,7 @@ const App = () => {
       <WalletDisconnectButton />
       <button onClick={registerUser}>Register User</button>
       {error && <p style={{ color: "red" }}>{error}</p>}
-      <button onClick={getBalance}>FetchBalance</button>
+      <button onClick={getBalance}>Fetch Balance</button>
       {myBalance && <p>My Balance: {myBalance}</p>}
     </div>
   );
