@@ -22,8 +22,8 @@ pub mod habit_tracker {
         register_user_handler(ctx)
     }
 
-    pub fn start_pool(
-        ctx: Context<StartPoolCtx>,
+    pub fn start_pool<'info>(
+        ctx: Context<'_, '_, '_, 'info, StartPoolCtx<'info>>,
         promise_id: String,
         amount: u64,
         deadline: u64,

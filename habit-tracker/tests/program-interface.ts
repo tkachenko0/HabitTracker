@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { web3 } from "@coral-xyz/anchor";
-import { sendAnchorInstructions, adjustPromiseMessage } from './utils';
+import { sendAnchorInstructions } from './utils';
 import { connection, program } from './config';
 
 export async function registerUser(user: web3.Keypair): Promise<void> {
@@ -20,6 +20,17 @@ export async function startPool(
     promiseMessage: string,
     voters: web3.PublicKey[]): Promise<void> {
     console.log(`Starting pool for promise ${promiseId}...`);
+
+    let remainingAccounts = voters.map(voterPublicKey => {
+        return { pubkey: voterPublicKey, isWritable: true, isSigner: false };
+    });
+
+    const userInvitesAccounts = voters.map(voterPublicKey => {
+        return { pubkey: getInvitesPDA(voterPublicKey), isWritable: true, isSigner: false }
+    });
+
+    remainingAccounts.push(...userInvitesAccounts);
+
     const instruction = await program.methods
         .startPool(
             promiseId,
@@ -29,9 +40,7 @@ export async function startPool(
             new anchor.BN(voters.length),
             new anchor.BN(promiseMessage.length),
         ).accounts({ promiser: promiser.publicKey })
-        .remainingAccounts(voters.map(voterPublicKey => {
-            return { pubkey: voterPublicKey, isWritable: false, isSigner: false };
-        }))
+        .remainingAccounts(remainingAccounts)
         .instruction();
 
     await sendAnchorInstructions(connection, [instruction], [promiser]);
@@ -63,38 +72,38 @@ export async function timeout(promiser: web3.Keypair, promiseId: string): Promis
     await sendAnchorInstructions(connection, [instruction], [promiser]);
 }
 
-export function getUserDataPDA(user: web3.PublicKey): web3.PublicKey{
+export function getUserDataPDA(user: web3.PublicKey): web3.PublicKey {
     return web3.PublicKey.findProgramAddressSync(
         [Buffer.from('UserData'), user.toBuffer()],
         program.programId,
     )[0];
 }
 
-export function getPromisePDA(promiser: web3.PublicKey, promiseId: string): web3.PublicKey{
+export function getPromisePDA(promiser: web3.PublicKey, promiseId: string): web3.PublicKey {
     return web3.PublicKey.findProgramAddressSync(
         [Buffer.from('Promise'), Buffer.from(promiseId), promiser.toBuffer()],
         program.programId,
     )[0];
 }
 
-export async function getNumPromises(promiser: web3.PublicKey): Promise<number>{
+export async function getNumPromises(promiser: web3.PublicKey): Promise<number> {
     const userDataPDA = getUserDataPDA(promiser);
     const promiserData = await program.account.userData.fetch(userDataPDA);
     return promiserData.numPromises.toNumber();
 }
 
-export function getInvitesPDA(user: web3.PublicKey): web3.PublicKey{
+export function getInvitesPDA(user: web3.PublicKey): web3.PublicKey {
     return web3.PublicKey.findProgramAddressSync(
-        [Buffer.from('Invites'), user.toBuffer()],
+        [Buffer.from('UserInvites'), user.toBuffer()],
         program.programId,
     )[0];
 }
 
-/* export async function getInvitedPromises(user: web3.PublicKey): Promise<web3.PublicKey[]> {
-    const invitesPDA = getUserDataPDA(user);
-    const invitesData = await program.account.invitedPromises.fetch(invitesPDA);
-    return [];
-} */
+export async function getInvitedPromises(user: web3.PublicKey): Promise<web3.PublicKey[]> {
+    const invitesPDA = getInvitesPDA(user);
+    const invitesData = await program.account.userInvites.fetch(invitesPDA);
+    return invitesData.invites;
+}
 
 export async function fetchPromise(promiser: web3.PublicKey, promiseId: string) {
     const promisePDA = await getPromisePDA(promiser, promiseId);

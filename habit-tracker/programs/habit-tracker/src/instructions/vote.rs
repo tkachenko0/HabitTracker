@@ -52,7 +52,6 @@ fn distribute_rewards(ctx: Context<VotingCtx>) -> Result<()> {
     let amount = promise.amount;
 
     if promise.was_respected() {
-        msg!("Promise was respected.");
         transfer_lamports(
             &promise.to_account_info(),
             &ctx.accounts.promiser.to_account_info(),
@@ -60,10 +59,8 @@ fn distribute_rewards(ctx: Context<VotingCtx>) -> Result<()> {
         )?;
         ctx.accounts.promiser_data.num_respected_promises += 1;
     } else {
-        msg!("Promise was not respected.");
         let amount_to_voter = amount / promise.votes.len() as u64;
         for voter_info in promise.votes.iter() {
-            msg!("Voter: {}", voter_info.voter);
             let voter_account = ctx
                 .remaining_accounts
                 .iter()

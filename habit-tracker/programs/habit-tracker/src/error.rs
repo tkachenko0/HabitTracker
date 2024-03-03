@@ -20,9 +20,15 @@ pub enum HabitTrackerError {
     #[msg("The number of voters is invalid")]
     InvalidVotersNumber,
 
+    #[msg("The number of invites is invalid")]
+    InvalidInvitesNumber,
+
     #[msg("The message length is invalid")]
     InvalidMessageLength,
 
     #[msg("Voter account not found among remaining accounts.")]
     VoterAccountNotFound,
+
+    #[msg("Invalid invite account.")]
+    InvalidInviteAccount,
 }

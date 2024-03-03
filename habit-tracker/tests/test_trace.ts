@@ -14,6 +14,7 @@ import {
   getNumPromises,
   getUserDataPDA,
   timeout,
+  getInvitedPromises,
 } from './program-interface';
 
 describe("habit-tracker", async () => {
@@ -50,9 +51,14 @@ describe("habit-tracker", async () => {
       voters.map(voter => voter.publicKey),
     );
 
-    await voteForAllVoters(promiseId, promiser.publicKey, voters, false);
+    /* const invites = await getInvitedPromises(voters[0].publicKey);
+    invites.forEach(invite => {
+      console.log(`invite: ${invite.toBase58()}`);
+    }); */
 
-    await fetchPromise(promiser.publicKey, promiseId);
+    //await voteForAllVoters(promiseId, promiser.publicKey, voters, false);
+
+    //await fetchPromise(promiser.publicKey, promiseId);
 
     //await waitDeadlineSlot(connection, deadlineSlot);
     //await timeout(promiser, promiseId);

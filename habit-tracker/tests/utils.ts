@@ -97,7 +97,3 @@ export async function waitDeadlineSlot(connection: Connection, deadlineSlot: num
     await new Promise(f => setTimeout(f, 1000));//sleep 1 second
   }
 }
-
-export function adjustPromiseMessage(promiseMessage: String) {
-  return Buffer.from(promiseMessage).slice(0, 200).toString('utf-8');
-}
