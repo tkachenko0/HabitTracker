@@ -1,11 +1,11 @@
 import { web3 } from "@coral-xyz/anchor";
-import { connection, program } from './config';
+import { connection, program } from "./config";
 import {
   generateKeyPair,
   printParticipants,
   getSystemKeyPair,
   waitDeadlineSlot,
-} from './utils';
+} from "./utils";
 import {
   registerUser,
   startPool,
@@ -15,22 +15,21 @@ import {
   getUserDataPDA,
   timeout,
   getInvitedPromises,
-} from './program-interface';
+} from "./program-interface";
 
 describe("habit-tracker", async () => {
-
   it("A Simple trace", async () => {
     const promiser: web3.Keypair = await getSystemKeyPair();
     const userDataPDA: web3.PublicKey = getUserDataPDA(promiser.publicKey);
     const voters = await generateVotersKeyPairs(connection, 4);
 
-    const displayVoters = voters.map(voter => ['voter', voter.publicKey]);
-    
+    const displayVoters = voters.map((voter) => ["voter", voter.publicKey]);
+
     await printParticipants(connection, [
-      ['programId', program.programId],
-      ['promiser', promiser.publicKey],
-      ['userDataPDA', userDataPDA],
-      ...displayVoters as [string, web3.PublicKey][]
+      ["programId", program.programId],
+      ["promiser", promiser.publicKey],
+      ["userDataPDA", userDataPDA],
+      ...(displayVoters as [string, web3.PublicKey][]),
     ]);
 
     await registerUser(promiser);
@@ -38,7 +37,7 @@ describe("habit-tracker", async () => {
     const numPromises = await getNumPromises(promiser.publicKey);
     const promiseId = `id:${numPromises}`;
     const numSlotsToWait = 25;
-    const deadlineSlot = await connection.getSlot() + numSlotsToWait;
+    const deadlineSlot = (await connection.getSlot()) + numSlotsToWait;
     const amountInSOL = 0.1;
     const messageString = `I promise to exercise 3 times a week for 10 weeks. If I fail, I will pay ${amountInSOL} SOL to the voters.`;
 
@@ -48,13 +47,13 @@ describe("habit-tracker", async () => {
       amountInSOL,
       deadlineSlot,
       messageString,
-      voters.map(voter => voter.publicKey),
+      voters.map((voter) => voter.publicKey)
     );
 
-    /* const invites = await getInvitedPromises(voters[0].publicKey);
+    const invites = await getInvitedPromises(voters[0].publicKey);
     invites.forEach(invite => {
       console.log(`invite: ${invite.toBase58()}`);
-    }); */
+    });
 
     //await voteForAllVoters(promiseId, promiser.publicKey, voters, false);
 
@@ -64,21 +63,34 @@ describe("habit-tracker", async () => {
     //await timeout(promiser, promiseId);
   });
 
-  async function voteForAllVoters(promiseId: string, promiser: web3.PublicKey, voters: web3.Keypair[], choice: boolean): Promise<void> {
+  async function voteForAllVoters(
+    promiseId: string,
+    promiser: web3.PublicKey,
+    voters: web3.Keypair[],
+    choice: boolean
+  ): Promise<void> {
     for (const voter of voters) {
-      const remainVotersPubkeys = removeVoter(voters, voter.publicKey).map(a => a.publicKey);
+      const remainVotersPubkeys = removeVoter(voters, voter.publicKey).map(
+        (a) => a.publicKey
+      );
       await vote(promiseId, voter, choice, promiser, remainVotersPubkeys);
     }
   }
 
-  async function generateVotersKeyPairs(connection: web3.Connection, numVoters: number): Promise<web3.Keypair[]> {
+  async function generateVotersKeyPairs(
+    connection: web3.Connection,
+    numVoters: number
+  ): Promise<web3.Keypair[]> {
     const voters: web3.Keypair[] = await Promise.all(
       Array.from({ length: numVoters }, () => generateKeyPair(connection, 10))
     );
     return voters;
   }
 
-  function removeVoter(voters: web3.Keypair[], pubkey: web3.PublicKey): web3.Keypair[] {
-    return voters.filter(voter => voter.publicKey !== pubkey);
+  function removeVoter(
+    voters: web3.Keypair[],
+    pubkey: web3.PublicKey
+  ): web3.Keypair[] {
+    return voters.filter((voter) => voter.publicKey !== pubkey);
   }
 });

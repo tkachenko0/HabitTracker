@@ -1,7 +1,7 @@
-import os from 'os';
-import fs from 'mz/fs';
-import path from 'path';
-import yaml from 'yaml';
+import os from "os";
+import fs from "mz/fs";
+import path from "path";
+import yaml from "yaml";
 import {
   Connection,
   Keypair,
@@ -10,34 +10,45 @@ import {
   Transaction,
   TransactionInstruction,
   sendAndConfirmTransaction,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 
 async function getConfig(): Promise<any> {
-  const CONFIG_FILE_PATH = path.resolve(os.homedir(), '.config', 'solana', 'cli', 'config.yml');
-  const configYml = await fs.readFile(CONFIG_FILE_PATH, { encoding: 'utf8' });
+  const CONFIG_FILE_PATH = path.resolve(
+    os.homedir(),
+    ".config",
+    "solana",
+    "cli",
+    "config.yml"
+  );
+  const configYml = await fs.readFile(CONFIG_FILE_PATH, { encoding: "utf8" });
   return yaml.parse(configYml);
 }
 
 export async function getSystemKeyPair(): Promise<Keypair> {
   try {
     let config = await getConfig();
-    if (!config.keypair_path) throw new Error('Missing keypair path');
+    if (!config.keypair_path) throw new Error("Missing keypair path");
     return await getKeyPairFromFile(config.keypair_path);
   } catch (err) {
     console.warn(
-      'Failed to create keypair from config file, falling back to new random keypair',
+      "Failed to create keypair from config file, falling back to new random keypair"
     );
     return Keypair.generate();
   }
 }
 
-export async function getKeyPairFromFile(keyPairPath: string): Promise<Keypair> {
-  const secretKeyJson = await fs.promises.readFile(keyPairPath, 'utf8');
+export async function getKeyPairFromFile(
+  keyPairPath: string
+): Promise<Keypair> {
+  const secretKeyJson = await fs.promises.readFile(keyPairPath, "utf8");
   const secretKey = Uint8Array.from(JSON.parse(secretKeyJson));
   return Keypair.fromSecretKey(secretKey);
 }
 
-export async function generateKeyPair(connection: Connection, balanceInSOL: number): Promise<Keypair> {
+export async function generateKeyPair(
+  connection: Connection,
+  balanceInSOL: number
+): Promise<Keypair> {
   const kp = Keypair.generate();
   const accountInfo = await connection.getAccountInfo(kp.publicKey);
 
@@ -52,38 +63,56 @@ export async function generateKeyPair(connection: Connection, balanceInSOL: numb
   return kp;
 }
 
-export async function getPublicKeyFromFile(keyPairPath: string): Promise<PublicKey> {
+export async function getPublicKeyFromFile(
+  keyPairPath: string
+): Promise<PublicKey> {
   return (await getKeyPairFromFile(keyPairPath)).publicKey;
 }
 
-export async function printParticipants(connection: Connection, participants: [string, PublicKey][]) {
+export async function printParticipants(
+  connection: Connection,
+  participants: [string, PublicKey][]
+) {
   const data = [];
   for (const [name, publicKey] of participants) {
     const balance = await connection.getBalance(publicKey);
-    data.push({ name: name, publicKey: publicKey.toBase58(), SOL: balance / LAMPORTS_PER_SOL });
+    data.push({
+      name: name,
+      publicKey: publicKey.toBase58(),
+      SOL: balance / LAMPORTS_PER_SOL,
+    });
   }
-  console.table(data, ['name', 'publicKey', 'SOL']);
+  console.table(data, ["name", "publicKey", "SOL"]);
 }
 
-export async function getTransactionFees(transaction: Transaction, connection: Connection): Promise<number> {
+export async function getTransactionFees(
+  transaction: Transaction,
+  connection: Connection
+): Promise<number> {
   const fees: number | null = await transaction.getEstimatedFee(connection);
   if (fees) {
     return fees;
   } else {
-    throw new Error('Error during estimation of fees');
+    throw new Error("Error during estimation of fees");
   }
 }
-export async function sendAnchorInstructions(connection: Connection, instructions: TransactionInstruction[], signers: Keypair[]): Promise<void> {
+export async function sendAnchorInstructions(
+  connection: Connection,
+  instructions: TransactionInstruction[],
+  signers: Keypair[]
+): Promise<void> {
   const transaction = new Transaction().add(...instructions);
 
   try {
     const transactionHash = await sendAndConfirmTransaction(
       connection,
       transaction,
-      signers,
+      signers
     );
-    console.log('  Transaction hash:', transactionHash);
-    console.log(`  https://explorer.solana.com/tx/${transactionHash}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`);
+    console.log("  Transaction hash:", transactionHash);
+    console.log(
+      `  https://explorer.solana.com/tx/${transactionHash}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`
+    );
     const tFees = await getTransactionFees(transaction, connection);
     console.log(`  Transaction fees: ${tFees / LAMPORTS_PER_SOL} SOL\n`);
   } catch (e) {
@@ -91,9 +120,12 @@ export async function sendAnchorInstructions(connection: Connection, instruction
   }
 }
 
-export async function waitDeadlineSlot(connection: Connection, deadlineSlot: number) {
+export async function waitDeadlineSlot(
+  connection: Connection,
+  deadlineSlot: number
+) {
   console.log(`\nWaiting the deadline slot: ${deadlineSlot}\n`);
-  while (await connection.getSlot() < deadlineSlot) {
-    await new Promise(f => setTimeout(f, 1000));//sleep 1 second
+  while ((await connection.getSlot()) < deadlineSlot) {
+    await new Promise((f) => setTimeout(f, 1000)); //sleep 1 second
   }
 }

@@ -86,8 +86,6 @@ pub fn start_pool_handler<'info>(
     for (i, invite) in invites.iter().enumerate() {
         let voter = &voters[i];
 
-        msg!("Invite: {:?}", invite.key);
-
         if invite.lamports() == 0 {
             msg!("Creating Invite Account {:?}", invite.key);
             let (invite_pda, bump) = Pubkey::find_program_address(
