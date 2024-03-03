@@ -21,21 +21,15 @@ describe("habit-tracker", async () => {
   it("A Simple trace", async () => {
     const promiser: web3.Keypair = await getSystemKeyPair();
     const userDataPDA: web3.PublicKey = getUserDataPDA(promiser.publicKey);
-    const [voter1, voter2, voter3, voter4] = await Promise.all([
-      generateKeyPair(connection, 10),
-      generateKeyPair(connection, 10),
-      generateKeyPair(connection, 10),
-      generateKeyPair(connection, 10),
-    ]);
+    const voters = await generateVotersKeyPairs(connection, 4);
 
+    const displayVoters = voters.map(voter => ['voter', voter.publicKey]);
+    
     await printParticipants(connection, [
       ['programId', program.programId],
       ['promiser', promiser.publicKey],
       ['userDataPDA', userDataPDA],
-      ['voter1', voter1.publicKey],
-      ['voter2', voter2.publicKey],
-      ['voter3', voter3.publicKey],
-      ['voter4', voter4.publicKey],
+      ...displayVoters as [string, web3.PublicKey][]
     ]);
 
     await registerUser(promiser);
@@ -53,17 +47,32 @@ describe("habit-tracker", async () => {
       amountInSOL,
       deadlineSlot,
       messageString,
-      [voter1.publicKey, voter2.publicKey, voter3.publicKey, voter4.publicKey],
+      voters.map(voter => voter.publicKey),
     );
 
-    await vote(promiseId, voter1, true, promiser.publicKey, [voter2.publicKey, voter3.publicKey]);
-    await vote(promiseId, voter2, false, promiser.publicKey, [voter1.publicKey, voter3.publicKey]);
-    await vote(promiseId, voter3, true, promiser.publicKey, [voter1.publicKey, voter2.publicKey]);
-    await vote(promiseId, voter4, true, promiser.publicKey, [voter1.publicKey, voter2.publicKey]);
+    await voteForAllVoters(promiseId, promiser.publicKey, voters, false);
 
     await fetchPromise(promiser.publicKey, promiseId);
 
     //await waitDeadlineSlot(connection, deadlineSlot);
     //await timeout(promiser, promiseId);
   });
+
+  async function voteForAllVoters(promiseId: string, promiser: web3.PublicKey, voters: web3.Keypair[], choice: boolean): Promise<void> {
+    for (const voter of voters) {
+      const remainVotersPubkeys = removeVoter(voters, voter.publicKey).map(a => a.publicKey);
+      await vote(promiseId, voter, choice, promiser, remainVotersPubkeys);
+    }
+  }
+
+  async function generateVotersKeyPairs(connection: web3.Connection, numVoters: number): Promise<web3.Keypair[]> {
+    const voters: web3.Keypair[] = await Promise.all(
+      Array.from({ length: numVoters }, () => generateKeyPair(connection, 10))
+    );
+    return voters;
+  }
+
+  function removeVoter(voters: web3.Keypair[], pubkey: web3.PublicKey): web3.Keypair[] {
+    return voters.filter(voter => voter.publicKey !== pubkey);
+  }
 });

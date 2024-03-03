@@ -3,7 +3,7 @@ import { web3 } from "@coral-xyz/anchor";
 import { sendAnchorInstructions, adjustPromiseMessage } from './utils';
 import { connection, program } from './config';
 
-export async function registerUser(user: web3.Keypair) {
+export async function registerUser(user: web3.Keypair): Promise<void> {
     console.log(`Registering user ${user.publicKey.toBase58()}...`);
     const instruction = await program.methods
         .registerUser()
@@ -18,8 +18,7 @@ export async function startPool(
     amountInSOL: number,
     deadline: number,
     promiseMessage: string,
-    voters: web3.PublicKey[],
-) {
+    voters: web3.PublicKey[]): Promise<void> {
     console.log(`Starting pool for promise ${promiseId}...`);
     const instruction = await program.methods
         .startPool(
@@ -28,8 +27,8 @@ export async function startPool(
             new anchor.BN(deadline),
             promiseMessage,
             new anchor.BN(voters.length),
-            new anchor.BN(promiseMessage.length),            
-        ).accounts({promiser: promiser.publicKey})
+            new anchor.BN(promiseMessage.length),
+        ).accounts({ promiser: promiser.publicKey })
         .remainingAccounts(voters.map(voterPublicKey => {
             return { pubkey: voterPublicKey, isWritable: false, isSigner: false };
         }))
@@ -43,8 +42,7 @@ export async function vote(
     voter: web3.Keypair,
     choice: boolean,
     promiser: web3.PublicKey,
-    otherVoters: web3.PublicKey[],
-) {
+    otherVoters: web3.PublicKey[]): Promise<void> {
     console.log(`Voting... user: ${voter.publicKey.toBase58()}, choice: ${choice}`);
     const instruction = await program.methods
         .vote(promiseId, choice)
@@ -56,7 +54,7 @@ export async function vote(
     await sendAnchorInstructions(connection, [instruction], [voter]);
 }
 
-export async function timeout(promiser: web3.Keypair, promiseId: string) {
+export async function timeout(promiser: web3.Keypair, promiseId: string): Promise<void> {
     console.log('Timeout...');
     const instruction = await program.methods
         .timeout(promiseId)
@@ -65,25 +63,38 @@ export async function timeout(promiser: web3.Keypair, promiseId: string) {
     await sendAnchorInstructions(connection, [instruction], [promiser]);
 }
 
-export function getUserDataPDA(user: web3.PublicKey) {
+export function getUserDataPDA(user: web3.PublicKey): web3.PublicKey{
     return web3.PublicKey.findProgramAddressSync(
         [Buffer.from('UserData'), user.toBuffer()],
         program.programId,
     )[0];
 }
 
-export function getPromisePDA(promiser: web3.PublicKey, promiseId: string) {
+export function getPromisePDA(promiser: web3.PublicKey, promiseId: string): web3.PublicKey{
     return web3.PublicKey.findProgramAddressSync(
         [Buffer.from('Promise'), Buffer.from(promiseId), promiser.toBuffer()],
         program.programId,
     )[0];
 }
 
-export async function getNumPromises(promiser: web3.PublicKey) {
+export async function getNumPromises(promiser: web3.PublicKey): Promise<number>{
     const userDataPDA = getUserDataPDA(promiser);
     const promiserData = await program.account.userData.fetch(userDataPDA);
     return promiserData.numPromises.toNumber();
 }
+
+export function getInvitesPDA(user: web3.PublicKey): web3.PublicKey{
+    return web3.PublicKey.findProgramAddressSync(
+        [Buffer.from('Invites'), user.toBuffer()],
+        program.programId,
+    )[0];
+}
+
+/* export async function getInvitedPromises(user: web3.PublicKey): Promise<web3.PublicKey[]> {
+    const invitesPDA = getUserDataPDA(user);
+    const invitesData = await program.account.invitedPromises.fetch(invitesPDA);
+    return [];
+} */
 
 export async function fetchPromise(promiser: web3.PublicKey, promiseId: string) {
     const promisePDA = await getPromisePDA(promiser, promiseId);
@@ -91,9 +102,13 @@ export async function fetchPromise(promiser: web3.PublicKey, promiseId: string) 
 
     console.log(`Promise Data PDA: ${promisePDA.toBase58()}`);
     console.log(`PromiseId: ${promiseId}`);
-
     console.log('Promiser:', promiseData.promiser.toBase58());
-    console.log('PromiseMessage:', Buffer.from(promiseData.promiseMessage).slice(0, 200).toString('utf-8'));
+    console.log('PromiseMessage:', Buffer.from(promiseData.promiseMessage).toString('utf-8'));
     console.log('Amount:', promiseData.amount.toNumber());
     console.log('Deadline:', promiseData.deadline.toNumber());
+    promiseData.votes.map(vote => {
+        const choice = vote.vote.yes ? 'yes' : (vote.vote.no ? 'no' : 'notVotedYet');
+        console.log('Voter:', vote.voter.toBase58());
+        console.log('Choice:', choice);
+    });
 }
